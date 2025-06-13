@@ -21,16 +21,24 @@ def evaluate_solution(individual, config, distance_matrix, transport_cost_matrix
         start_node = individual[i]
         end_node = individual[i+1]
 
+        # 确保索引在有效范围内
+        if start_node >= len(distance_matrix) or end_node >= len(distance_matrix):
+            return float('inf'), 0, 0, 0
+
         segment_distance = distance_matrix[start_node, end_node]
+        if segment_distance == 0:  # 如果距离为0，说明是无效路径
+            return float('inf'), 0, 0, 0
 
         # 1. 运输费用 (从矩阵读取)
-        total_transport_cost += transport_cost_matrix[start_node, end_node]
+        transport_cost = transport_cost_matrix[start_node, end_node]
+        total_transport_cost += transport_cost
 
         # 2. 距离累加
         total_distance += segment_distance
 
         # 3. 碳排放累加 (从矩阵读取因子)
-        total_carbon_emissions += segment_distance * carbon_factor_matrix[start_node, end_node]
+        carbon_factor = carbon_factor_matrix[start_node, end_node]
+        total_carbon_emissions += segment_distance * carbon_factor
 
     # 计算衍生的时间成本和碳成本
     total_time_cost = (total_distance / config.speed) * config.time_cost_per_unit

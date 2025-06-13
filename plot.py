@@ -1,9 +1,79 @@
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import networkx as nx
 import os
 
-def plot_results(log_file="results/fitness_log.csv", solution_file="results/final_solution.json", test_data=None):
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置中文字体为黑体
+plt.rcParams['axes.unicode_minus'] = False    # 正常显示负号
+
+def plot_results(result):
+    """
+    根据优化结果生成成本对比图
+    
+    Args:
+        result: Result对象，包含path和costs属性
+    """
+    # 准备数据
+    costs = result.costs
+    labels = ['运输费用', '时间成本', '碳排放成本']
+    values = [costs.freight, costs.time, costs.carbon]
+    colors = ['#2ecc71', '#3498db', '#e74c3c']
+    
+    # 创建饼图
+    plt.figure(figsize=(10, 6))
+    plt.pie(values, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+    plt.title('成本构成分析')
+    
+    # 添加总成本信息
+    plt.figtext(0.5, 0.01, f'总成本: {costs.total:.2f}元', ha='center', fontsize=12)
+    
+    # 调整布局
+    plt.tight_layout()
+    
+    return plt.gcf()
+
+def plot_cost_breakdown(result):
+    """
+    根据优化结果生成成本构成堆叠柱状图
+    """
+    costs = result.costs
+    labels = ['总成本构成']
+    freight_costs = [costs.freight]
+    time_costs = [costs.time]
+    carbon_costs = [costs.carbon]
+
+    # 设置图形大小
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    # 绘制堆叠柱状图
+    bar_width = 0.5
+    ax.bar(labels, freight_costs, bar_width, label='运输费用', color='#2ecc71')
+    ax.bar(labels, time_costs, bar_width, bottom=freight_costs, label='时间成本', color='#3498db')
+    ax.bar(labels, carbon_costs, bar_width, bottom=[f + t for f, t in zip(freight_costs, time_costs)],
+           label='碳排放成本', color='#e74c3c')
+
+    ax.set_ylabel('成本 (元)')
+    ax.set_title('成本构成明细 (堆叠柱状图)')
+    ax.legend()
+
+    # 在每个条形段上添加文本标签
+    total = costs.total
+    if total > 0:
+        y_offset = costs.freight / 2
+        ax.text(0, y_offset, f'{costs.freight:.2f}', ha='center', va='center', color='white', weight='bold')
+
+        y_offset += (costs.freight / 2) + (costs.time / 2)
+        ax.text(0, y_offset, f'{costs.time:.2f}', ha='center', va='center', color='white', weight='bold')
+        
+        y_offset += (costs.time / 2) + (costs.carbon / 2)
+        ax.text(0, y_offset, f'{costs.carbon:.2f}', ha='center', va='center', color='white', weight='bold')
+
+    plt.tight_layout()
+    return fig
+
+def plot_results_old(log_file="results/fitness_log.csv", solution_file="results/final_solution.json", test_data=None):
     """
     读取日志和解文件，生成一套完整的可视化图表。
     """

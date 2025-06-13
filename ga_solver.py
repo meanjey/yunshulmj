@@ -49,7 +49,10 @@ class GeneticAlgorithmVRP:
             individual, self.config, self.distance_matrix, 
             self.transport_cost_matrix, self.carbon_factor_matrix
         )
-        return 1 / total_cost if total_cost != 0 else float('inf')
+        # 避免除以零和负数
+        if total_cost is None or total_cost <= 0 or total_cost == float('inf'):
+            return 1e-6
+        return 1 / total_cost
 
     def create_individual(self):
         locations = list(range(self.config.num_locations))
@@ -199,3 +202,58 @@ class GeneticAlgorithmVRP:
         
         print(f"\n最终优化方案已保存至: {solution_filepath}")
         return final_solution, solution_data 
+
+def solve_vrp(df, carbon_price=50, time_cost=60):
+    """求解VRP问题的主函数
+    
+    Args:
+        df: pandas DataFrame，包含from, to, cost, distance, carbon_factor列
+        carbon_price: float，碳价（元/kg）
+        time_cost: float，时间成本（元/h）
+    
+    Returns:
+        dict: 包含最优路径和成本信息的字典
+    """
+    # 创建配置对象
+    config = Config()
+    config.carbon_price = carbon_price
+    config.time_cost_per_unit = time_cost
+    
+    # 获取唯一的地点列表
+    locations = sorted(list(set(df['from'].unique()) | set(df['to'].unique())))
+    location_to_index = {loc: idx for idx, loc in enumerate(locations)}
+    config.num_locations = len(locations)
+    
+    # 创建距离矩阵、运输成本矩阵和碳排放因子矩阵
+    distance_matrix = np.zeros((config.num_locations, config.num_locations))
+    transport_cost_matrix = np.zeros((config.num_locations, config.num_locations))
+    carbon_factor_matrix = np.zeros((config.num_locations, config.num_locations))
+    
+    for _, row in df.iterrows():
+        i = location_to_index[row['from']]
+        j = location_to_index[row['to']]
+        distance_matrix[i, j] = row['distance']
+        transport_cost_matrix[i, j] = row['cost']
+        carbon_factor_matrix[i, j] = row['carbon_factor']
+    
+    # 创建并运行遗传算法求解器
+    ga = GeneticAlgorithmVRP(config, distance_matrix, transport_cost_matrix, carbon_factor_matrix)
+    final_solution, solution_data = ga.run()
+    
+    # 将数字索引转换回地点名称
+    path = [locations[i] for i in final_solution]
+    
+    # 创建结果对象
+    class Result:
+        def __init__(self, path, costs):
+            self.path = path
+            self.costs = costs
+    
+    costs = type('Costs', (), {
+        'freight': solution_data['costs']['freight'],
+        'time': solution_data['costs']['time'],
+        'carbon': solution_data['costs']['carbon'],
+        'total': solution_data['costs']['total']
+    })
+    
+    return Result(path, costs) 

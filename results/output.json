@@ -1,0 +1,20 @@
+{
+    "timestamp": "2025-06-13 13:11:18",
+    "parameters": {
+        "carbon_price": 50.0,
+        "time_cost": 60.0
+    },
+    "optimal_path": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "A"
+    ],
+    "costs": {
+        "freight": 570.0,
+        "time": 285.0,
+        "carbon": 8200.0,
+        "total": 9055.0
+    }
+}
